@@ -32,6 +32,26 @@ export async function loginWithEmail(formData: FormData) {
   return { success: true }
 }
 
+export async function signUpWithEmail(formData: FormData) {
+  const email = formData.get('email') as string
+  const displayName = formData.get('displayName') as string
+
+  if (!email) return { error: '이메일을 입력해주세요.' }
+  if (!displayName) return { error: '닉네임을 입력해주세요.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      data: { display_name: displayName },
+    },
+  })
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
