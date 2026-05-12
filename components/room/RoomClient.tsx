@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { StudyRoom } from '@/types/room.types'
 import { useRoom } from '@/hooks/room/useRoom'
@@ -11,6 +11,7 @@ import { ChatBox } from './ChatBox'
 import { XPBar } from '@/components/dashboard/XPBar'
 import { AchievementToast } from '@/components/dashboard/AchievementToast'
 import { endStudySession, startStudySession } from '@/services/room.service'
+import { notifyFriendsStudyStart } from '@/services/friend.service'
 import type { Achievement } from '@/types/user.types'
 import type { TimerPhase } from '@/types/timer.types'
 
@@ -26,6 +27,7 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [pendingAchievement, setPendingAchievement] = useState<Achievement | null>(null)
   const [chatOpen, setChatOpen] = useState(true)
+  const sessionStartedRef = useRef(false)
 
   const xp = useXP(userId)
   const { participants, messages, connected, sendMessage, updatePresence, broadcastTimer } = useRoom(
@@ -42,10 +44,17 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
     await updatePresence({ status: 'focusing' })
   }, [sessionId, xp, room.id, userId, updatePresence])
 
-  const handleBroadcast = useCallback((phase: TimerPhase, timeLeft: number, sc: number) => {
+  const handleBroadcast = useCallback(async (phase: TimerPhase, timeLeft: number, sc: number) => {
     broadcastTimer({ type: 'timer_update', userId, phase, timeLeft, sessionCount: sc })
     updatePresence({ status: phase === 'focus' ? 'focusing' : 'on_break' })
-  }, [broadcastTimer, userId, updatePresence])
+
+    if (phase === 'focus' && !sessionStartedRef.current) {
+      sessionStartedRef.current = true
+      const newId = await startStudySession(room.id, userId)
+      setSessionId(newId)
+      notifyFriendsStudyStart(userId, room.id)
+    }
+  }, [broadcastTimer, userId, updatePresence, room.id])
 
   return (
     // fixed overlay — covers sidebar from (main) layout

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
 import { getLevelTier } from '@/lib/xp/formulas'
+import { NotificationBell } from './NotificationBell'
 
 interface SidebarUser {
   id: string
@@ -16,11 +17,12 @@ interface SidebarUser {
 }
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: '대시보드',  icon: '🏠' },
-  { href: '/rooms',     label: '집중방',    icon: '🚪' },
-  { href: '/ranking',   label: '랭킹',      icon: '🏆' },
-  { href: '/profile',   label: '업적',      icon: '🎖' },
-  { href: '/settings',  label: '설정',      icon: '⚙' },
+  { href: '/dashboard', label: '대시보드', icon: '🏠' },
+  { href: '/rooms',     label: '집중방',   icon: '🚪' },
+  { href: '/ranking',   label: '랭킹',     icon: '🏆' },
+  { href: '/friends',   label: '친구',     icon: '👥' },
+  { href: '/profile',   label: '업적',     icon: '🎖' },
+  { href: '/settings',  label: '설정',     icon: '⚙' },
 ]
 
 export function Sidebar({ user }: { user: SidebarUser }) {
@@ -30,12 +32,15 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
   return (
     <aside className="w-60 flex-shrink-0 flex flex-col bg-[#161B22] border-r border-white/10 h-full">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-        <div className="w-9 h-9 rounded-xl bg-[#6366F1] flex items-center justify-center text-white text-lg font-bold shadow-[0_0_16px_rgba(99,102,241,0.4)]">
-          ⚡
+      {/* Logo + bell */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-[#6366F1] flex items-center justify-center text-white font-bold shadow-[0_0_12px_rgba(99,102,241,0.4)]">
+            ⚡
+          </div>
+          <span className="font-bold text-white tracking-tight">FocusSync</span>
         </div>
-        <span className="font-bold text-white text-lg tracking-tight">FocusSync</span>
+        <NotificationBell userId={user.id} />
       </div>
 
       {/* Nav */}
@@ -62,10 +67,10 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
       {/* User profile */}
       <div className="p-4 border-t border-white/10">
-        <div className="flex items-center gap-3 mb-3">
+        <Link href="/profile" className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${tier.color}44, ${tier.color}22)`, border: `1.5px solid ${tier.color}55` }}
+            style={{ background: `${tier.color}22`, border: `1.5px solid ${tier.color}55` }}
           >
             {user.avatarUrl
               ? <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
@@ -75,8 +80,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
             <p className="text-sm font-semibold text-white truncate">{user.displayName}</p>
             <p className="text-xs font-medium" style={{ color: tier.color }}>Lv.{user.level} {tier.name}</p>
           </div>
-        </div>
-        {/* XP bar */}
+        </Link>
         <div className="space-y-1">
           <div className="h-1.5 bg-[#0D0F14] rounded-full overflow-hidden">
             <div

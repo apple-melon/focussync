@@ -6,7 +6,10 @@ import type { Participant, ChatMessage, TimerBroadcast, PresencePayload } from '
 import { getChatMessages, saveChatMessage } from '@/services/room.service'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-export function useRoom(roomId: string, currentUser: { id: string; displayName: string; avatarUrl: string | null; level: number }) {
+export function useRoom(
+  roomId: string,
+  currentUser: { id: string; displayName: string; avatarUrl: string | null; level: number },
+) {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [connected, setConnected] = useState(false)
@@ -17,10 +20,9 @@ export function useRoom(roomId: string, currentUser: { id: string; displayName: 
     const channel = supabase.channel(`room:${roomId}`, {
       config: { presence: { key: currentUser.id } },
     })
-
     channelRef.current = channel
 
-    // Presence
+    // Presence sync
     channel.on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<PresencePayload>()
       const list: Participant[] = Object.values(state).flatMap((presences) =>
@@ -37,16 +39,20 @@ export function useRoom(roomId: string, currentUser: { id: string; displayName: 
       setParticipants(list)
     })
 
-    // Chat messages via DB changes
+    // Realtime chat messages
     channel.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
       (payload) => {
-        setMessages((prev) => [...prev, payload.new as ChatMessage])
+        setMessages((prev) => {
+          // Deduplicate by id
+          const exists = prev.some((m) => m.id === payload.new.id)
+          if (exists) return prev
+          return [...prev, payload.new as ChatMessage]
+        })
       },
     )
 
-    // Subscribe
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         setConnected(true)
@@ -62,7 +68,6 @@ export function useRoom(roomId: string, currentUser: { id: string; displayName: 
       }
     })
 
-    // Load chat history
     getChatMessages(roomId).then(setMessages)
 
     return () => {
@@ -72,20 +77,30 @@ export function useRoom(roomId: string, currentUser: { id: string; displayName: 
   }, [roomId, currentUser.id])
 
   const sendMessage = useCallback(async (content: string) => {
-    await saveChatMessage(roomId, currentUser.id, content)
-  }, [roomId, currentUser.id])
+    await saveChatMessage(
+      roomId,
+      currentUser.id,
+      content,
+      currentUser.displayName,
+      currentUser.avatarUrl,
+    )
+  }, [roomId, currentUser.id, currentUser.displayName, currentUser.avatarUrl])
 
   const updatePresence = useCallback(async (payload: Partial<PresencePayload>) => {
     if (!channelRef.current) return
-    await channelRef.current.track({ userId: currentUser.id, ...payload })
-  }, [currentUser.id])
+    await channelRef.current.track({
+      userId: currentUser.id,
+      displayName: currentUser.displayName,
+      avatarUrl: currentUser.avatarUrl,
+      level: currentUser.level,
+      totalFocusMinutes: 0,
+      status: 'idle',
+      ...payload,
+    })
+  }, [currentUser])
 
   const broadcastTimer = useCallback((data: TimerBroadcast) => {
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'timer_update',
-      payload: data,
-    })
+    channelRef.current?.send({ type: 'broadcast', event: 'timer_update', payload: data })
   }, [])
 
   return { participants, messages, connected, sendMessage, updatePresence, broadcastTimer }

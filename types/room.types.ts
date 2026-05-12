@@ -27,13 +27,13 @@ export interface Participant {
 
 export interface ChatMessage {
   id: string
-  roomId: string
-  userId: string
+  room_id: string
+  user_id: string
   content: string
-  isSystem: boolean
-  senderName: string
-  senderAvatar: string | null
-  createdAt: string
+  is_system: boolean
+  sender_name: string
+  sender_avatar: string | null
+  created_at: string
 }
 
 export interface TimerBroadcast {

@@ -4,6 +4,7 @@ import { usePomodoro } from '@/hooks/timer/usePomodoro'
 import { TimerRing } from './TimerRing'
 import { TimerControls } from './TimerControls'
 import { TimerSettings } from './TimerSettings'
+import { TimerPresets } from './TimerPresets'
 import type { TimerPhase } from '@/types/timer.types'
 
 interface Props {
@@ -21,14 +22,16 @@ export function PomodoroTimer({ onSessionComplete, onBroadcast }: Props) {
     onBroadcast,
   })
 
-  const totalSeconds = (() => {
-    if (state.phase === 'focus') return settings.focusMinutes * 60
-    if (state.phase === 'short_break') return settings.shortBreakMinutes * 60
-    return settings.longBreakMinutes * 60
-  })()
+  const totalSeconds =
+    state.phase === 'focus' ? settings.focusMinutes * 60
+    : state.phase === 'short_break' ? settings.shortBreakMinutes * 60
+    : settings.longBreakMinutes * 60
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center gap-3">
+      {/* Quick presets */}
+      <TimerPresets settings={settings} controls={controls} isRunning={state.isRunning} />
+
       <TimerRing
         phase={state.phase}
         timeLeft={state.timeLeft}

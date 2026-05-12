@@ -90,6 +90,8 @@ export async function saveChatMessage(
   roomId: string,
   userId: string,
   content: string,
+  senderName = '',
+  senderAvatar: string | null = null,
   isSystem = false,
 ): Promise<void> {
   const supabase = createClient()
@@ -98,6 +100,8 @@ export async function saveChatMessage(
     user_id: userId,
     content,
     is_system: isSystem,
+    sender_name: senderName,
+    sender_avatar: senderAvatar,
   })
 }
 

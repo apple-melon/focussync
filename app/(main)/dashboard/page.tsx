@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getPublicRooms } from '@/services/room.service'
 import { levelProgress, getLevelTier } from '@/lib/xp/formulas'
+import { GoalCard } from '@/components/dashboard/GoalCard'
 
 const ROOM_GRADIENTS = [
   'from-indigo-900 via-purple-900 to-slate-900',
@@ -67,7 +68,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, xp, streak_days, total_focus_minutes, last_study_date')
+    .select('display_name, xp, streak_days, total_focus_minutes, last_study_date, daily_goal_minutes')
     .eq('id', user!.id)
     .single()
 
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
   const totalHours = Math.floor((profile?.total_focus_minutes ?? 0) / 60)
   const totalMins = (profile?.total_focus_minutes ?? 0) % 60
   const todayMins = weeklyData[6]
-  const goalMins = 360
+  const goalMins = profile?.daily_goal_minutes ?? 360
   const goalPct = Math.min(100, Math.round((todayMins / goalMins) * 100))
   const displayName = profile?.display_name ?? user?.email?.split('@')[0] ?? 'User'
 
@@ -171,11 +172,11 @@ export default async function DashboardPage() {
         </div>
 
         {/* Goal progress */}
-        <div className="bg-[#161B22] border border-white/10 rounded-2xl p-5 flex flex-col items-center justify-center gap-3">
-          <h3 className="text-sm font-semibold text-white self-start">목표 달성률</h3>
-          <GoalRing pct={goalPct} />
-          <p className="text-xs text-slate-500">오늘 목표: {goalMins / 60}시간 집중</p>
-        </div>
+        <GoalCard
+          userId={user!.id}
+          dailyGoalMinutes={goalMins}
+          todayMinutes={todayMins}
+        />
 
         {/* Recent achievements */}
         <div className="bg-[#161B22] border border-white/10 rounded-2xl p-5">
