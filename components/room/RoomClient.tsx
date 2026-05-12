@@ -15,6 +15,14 @@ import { notifyFriendsStudyStart } from '@/services/friend.service'
 import type { Achievement } from '@/types/user.types'
 import type { TimerPhase } from '@/types/timer.types'
 
+type Status = 'idle' | 'focusing' | 'on_break'
+
+const STATUS_OPTIONS: { value: Status; label: string; icon: string; color: string }[] = [
+  { value: 'focusing', label: '집중 중', icon: '🔥', color: '#22C55E' },
+  { value: 'on_break', label: '휴식 중', icon: '☕', color: '#EAB308' },
+  { value: 'idle',     label: '대기',    icon: '💤', color: '#64748B' },
+]
+
 interface Props {
   room: StudyRoom
   userId: string
@@ -27,6 +35,7 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [pendingAchievement, setPendingAchievement] = useState<Achievement | null>(null)
   const [chatOpen, setChatOpen] = useState(true)
+  const [currentStatus, setCurrentStatus] = useState<Status>('idle')
   const sessionStartedRef = useRef(false)
 
   const xp = useXP(userId)
@@ -35,18 +44,26 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
     { id: userId, displayName, avatarUrl, level },
   )
 
+  async function changeStatus(status: Status) {
+    setCurrentStatus(status)
+    await updatePresence({ status })
+  }
+
   const handleSessionComplete = useCallback(async (focusMinutes: number) => {
     if (sessionId) await endStudySession(sessionId, focusMinutes)
     const result = await xp.awardSessionXP(focusMinutes, sessionId ?? '')
     if (result?.newAchievements?.length) setPendingAchievement(result.newAchievements[0])
     const newId = await startStudySession(room.id, userId)
     setSessionId(newId)
+    setCurrentStatus('focusing')
     await updatePresence({ status: 'focusing' })
   }, [sessionId, xp, room.id, userId, updatePresence])
 
   const handleBroadcast = useCallback(async (phase: TimerPhase, timeLeft: number, sc: number) => {
     broadcastTimer({ type: 'timer_update', userId, phase, timeLeft, sessionCount: sc })
-    updatePresence({ status: phase === 'focus' ? 'focusing' : 'on_break' })
+    const status: Status = phase === 'focus' ? 'focusing' : 'on_break'
+    setCurrentStatus(status)
+    updatePresence({ status })
 
     if (phase === 'focus' && !sessionStartedRef.current) {
       sessionStartedRef.current = true
@@ -56,8 +73,9 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
     }
   }, [broadcastTimer, userId, updatePresence, room.id])
 
+  const activeOption = STATUS_OPTIONS.find((o) => o.value === currentStatus)!
+
   return (
-    // fixed overlay — covers sidebar from (main) layout
     <div className="fixed inset-0 z-50 bg-[#0D0F14] flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-[#161B22] flex-shrink-0">
@@ -73,6 +91,25 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Manual status selector */}
+          <div className="flex items-center gap-1 bg-[#0D0F14] border border-white/10 rounded-xl p-1">
+            {STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => changeStatus(opt.value)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  currentStatus === opt.value
+                    ? 'text-white'
+                    : 'text-slate-500 hover:text-slate-300'
+                }`}
+                style={currentStatus === opt.value ? { background: `${opt.color}22`, color: opt.color } : {}}
+              >
+                <span>{opt.icon}</span>
+                <span className="hidden sm:inline">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+
           <span className="text-xs text-slate-500 font-mono bg-[#0D0F14] px-2 py-1 rounded border border-white/10">
             {room.code}
           </span>
@@ -92,11 +129,21 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
       {/* Body */}
       <div className="flex-1 flex overflow-hidden">
         {/* Center — timer */}
-        <main className="flex-1 flex flex-col items-center justify-center gap-6 p-6 overflow-y-auto">
+        <main className="flex-1 flex flex-col items-center justify-center gap-5 p-6 overflow-y-auto">
           <PomodoroTimer
             onSessionComplete={handleSessionComplete}
             onBroadcast={handleBroadcast}
           />
+
+          {/* Current status indicator */}
+          <div
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border"
+            style={{ color: activeOption.color, borderColor: `${activeOption.color}40`, background: `${activeOption.color}15` }}
+          >
+            <span>{activeOption.icon}</span>
+            <span>{activeOption.label}</span>
+          </div>
+
           <div className="w-72">
             <XPBar xp={xp.xp} level={xp.level} current={xp.current} required={xp.required} pct={xp.pct} />
           </div>

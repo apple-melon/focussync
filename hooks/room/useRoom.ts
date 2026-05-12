@@ -15,6 +15,13 @@ export function useRoom(
   const [connected, setConnected] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  function addMessage(msg: ChatMessage) {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev
+      return [...prev, msg]
+    })
+  }
+
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase.channel(`room:${roomId}`, {
@@ -39,19 +46,10 @@ export function useRoom(
       setParticipants(list)
     })
 
-    // Realtime chat messages
-    channel.on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_id=eq.${roomId}` },
-      (payload) => {
-        setMessages((prev) => {
-          // Deduplicate by id
-          const exists = prev.some((m) => m.id === payload.new.id)
-          if (exists) return prev
-          return [...prev, payload.new as ChatMessage]
-        })
-      },
-    )
+    // Primary: realtime chat via broadcast (instant, no DB subscription needed)
+    channel.on('broadcast', { event: 'chat_message' }, ({ payload }) => {
+      addMessage(payload as ChatMessage)
+    })
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
@@ -68,6 +66,7 @@ export function useRoom(
       }
     })
 
+    // Load history from DB
     getChatMessages(roomId).then(setMessages)
 
     return () => {
@@ -77,13 +76,22 @@ export function useRoom(
   }, [roomId, currentUser.id])
 
   const sendMessage = useCallback(async (content: string) => {
-    await saveChatMessage(
-      roomId,
-      currentUser.id,
+    const msg: ChatMessage = {
+      id: crypto.randomUUID(),
+      room_id: roomId,
+      user_id: currentUser.id,
       content,
-      currentUser.displayName,
-      currentUser.avatarUrl,
-    )
+      is_system: false,
+      sender_name: currentUser.displayName,
+      sender_avatar: currentUser.avatarUrl,
+      created_at: new Date().toISOString(),
+    }
+
+    // Broadcast to all subscribers in the channel (including self) — instant delivery
+    channelRef.current?.send({ type: 'broadcast', event: 'chat_message', payload: msg })
+
+    // Persist to DB asynchronously for message history
+    saveChatMessage(roomId, currentUser.id, content, currentUser.displayName, currentUser.avatarUrl)
   }, [roomId, currentUser.id, currentUser.displayName, currentUser.avatarUrl])
 
   const updatePresence = useCallback(async (payload: Partial<PresencePayload>) => {
