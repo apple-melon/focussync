@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import Link from 'next/link'
 import type { StudyRoom } from '@/types/room.types'
 import { useRoom } from '@/hooks/room/useRoom'
-import { usePomodoro } from '@/hooks/timer/usePomodoro'
 import { useXP } from '@/hooks/dashboard/useXP'
 import { PomodoroTimer } from '@/components/timer/PomodoroTimer'
 import { ParticipantList } from './ParticipantList'
@@ -25,6 +25,7 @@ interface Props {
 export function RoomClient({ room, userId, displayName, avatarUrl, level }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [pendingAchievement, setPendingAchievement] = useState<Achievement | null>(null)
+  const [chatOpen, setChatOpen] = useState(true)
 
   const xp = useXP(userId)
   const { participants, messages, connected, sendMessage, updatePresence, broadcastTimer } = useRoom(
@@ -33,13 +34,9 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
   )
 
   const handleSessionComplete = useCallback(async (focusMinutes: number) => {
-    if (sessionId) {
-      await endStudySession(sessionId, focusMinutes)
-    }
+    if (sessionId) await endStudySession(sessionId, focusMinutes)
     const result = await xp.awardSessionXP(focusMinutes, sessionId ?? '')
-    if (result?.newAchievements?.length) {
-      setPendingAchievement(result.newAchievements[0])
-    }
+    if (result?.newAchievements?.length) setPendingAchievement(result.newAchievements[0])
     const newId = await startStudySession(room.id, userId)
     setSessionId(newId)
     await updatePresence({ status: 'focusing' })
@@ -51,61 +48,80 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
   }, [broadcastTimer, userId, updatePresence])
 
   return (
-    <div className="min-h-screen bg-[#0D0F14] flex flex-col">
+    // fixed overlay — covers sidebar from (main) layout
+    <div className="fixed inset-0 z-50 bg-[#0D0F14] flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#161B22]">
-        <div>
-          <h1 className="font-bold text-white">{room.name}</h1>
-          {room.topic && <p className="text-xs text-slate-400">{room.topic}</p>}
-        </div>
+      <header className="flex items-center justify-between px-5 py-3 border-b border-white/10 bg-[#161B22] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <span className={`w-2 h-2 rounded-full ${connected ? 'bg-[#22C55E]' : 'bg-red-500'}`} />
-          <span className="text-xs text-slate-400">{connected ? '연결됨' : '연결 중...'}</span>
+          <span className="text-lg">⏱</span>
+          <div>
+            <h1 className="font-bold text-white text-sm leading-tight">{room.name}</h1>
+            <p className="text-xs text-slate-500">
+              👥 {participants.length}명 참여 중
+              {room.topic && ` · ${room.topic}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500 font-mono bg-[#0D0F14] px-2 py-1 rounded border border-white/10">
             {room.code}
           </span>
+          <span className={`flex items-center gap-1.5 text-xs ${connected ? 'text-[#22C55E]' : 'text-red-400'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-[#22C55E] animate-pulse' : 'bg-red-400'}`} />
+            {connected ? '연결됨' : '연결 중'}
+          </span>
+          <Link
+            href="/dashboard"
+            className="text-xs text-red-400 hover:text-red-300 font-semibold transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10"
+          >
+            나가기
+          </Link>
         </div>
       </header>
 
-      {/* Main layout */}
+      {/* Body */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left sidebar — participants */}
-        <aside className="w-56 border-r border-white/10 bg-[#161B22] p-3 overflow-y-auto flex-shrink-0">
-          <ParticipantList participants={participants} currentUserId={userId} />
-        </aside>
-
         {/* Center — timer */}
         <main className="flex-1 flex flex-col items-center justify-center gap-6 p-6 overflow-y-auto">
           <PomodoroTimer
             onSessionComplete={handleSessionComplete}
             onBroadcast={handleBroadcast}
           />
-          {/* XP bar */}
           <div className="w-72">
-            <XPBar
-              xp={xp.xp}
-              level={xp.level}
-              current={xp.current}
-              required={xp.required}
-              pct={xp.pct}
-            />
+            <XPBar xp={xp.xp} level={xp.level} current={xp.current} required={xp.required} pct={xp.pct} />
           </div>
         </main>
 
-        {/* Right sidebar — chat */}
-        <aside className="w-72 border-l border-white/10 bg-[#161B22] p-3 flex flex-col overflow-hidden flex-shrink-0">
-          <ChatBox
-            messages={messages}
-            currentUserId={userId}
-            onSend={sendMessage}
-          />
+        {/* Right panel */}
+        <aside className="w-72 border-l border-white/10 bg-[#161B22] flex flex-col overflow-hidden flex-shrink-0">
+          {/* Tabs */}
+          <div className="flex border-b border-white/10 flex-shrink-0">
+            <button
+              onClick={() => setChatOpen(false)}
+              className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${!chatOpen ? 'text-white border-b-2 border-[#6366F1]' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              👥 참여자 {participants.length}
+            </button>
+            <button
+              onClick={() => setChatOpen(true)}
+              className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${chatOpen ? 'text-white border-b-2 border-[#6366F1]' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              💬 채팅
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-hidden p-3">
+            {chatOpen ? (
+              <ChatBox messages={messages} currentUserId={userId} onSend={sendMessage} />
+            ) : (
+              <ParticipantList participants={participants} currentUserId={userId} />
+            )}
+          </div>
         </aside>
       </div>
 
-      <AchievementToast
-        achievement={pendingAchievement}
-        onDismiss={() => setPendingAchievement(null)}
-      />
+      <AchievementToast achievement={pendingAchievement} onDismiss={() => setPendingAchievement(null)} />
     </div>
   )
 }
