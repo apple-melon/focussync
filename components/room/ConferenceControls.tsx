@@ -1,8 +1,7 @@
 'use client'
 
-import { useTrackToggle, useLocalParticipant } from '@livekit/components-react'
+import { useTrackToggle } from '@livekit/components-react'
 import { Track } from 'livekit-client'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/utils/cn'
 
 interface ControlBtnProps {
@@ -10,24 +9,25 @@ interface ControlBtnProps {
   active?: boolean
   danger?: boolean
   label: string
-  icon: string
-  iconOff?: string
+  activeIcon: string
+  inactiveIcon?: string
 }
 
-function ControlBtn({ onClick, active = true, danger, label, icon, iconOff }: ControlBtnProps) {
+function ControlBtn({ onClick, active = true, danger, label, activeIcon, inactiveIcon }: ControlBtnProps) {
+  const icon = active ? activeIcon : (inactiveIcon ?? activeIcon)
   return (
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all',
+        'flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all',
         danger
-          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
+          ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30'
           : active
-          ? 'bg-white/8 hover:bg-white/12 text-white'
-          : 'bg-[#242E42] hover:bg-[#2d3748] text-slate-500',
+          ? 'bg-white/8 hover:bg-white/12 text-white border border-white/10'
+          : 'bg-[#242E42] hover:bg-[#2d3748] text-slate-500 border border-white/5',
       )}
     >
-      <span className="text-xl">{active ? icon : (iconOff ?? icon)}</span>
+      <span className="text-xl">{icon}</span>
       <span>{label}</span>
     </button>
   )
@@ -37,37 +37,28 @@ interface Props {
   onChatToggle: () => void
   chatOpen: boolean
   unreadCount?: number
+  onLeave: () => void
 }
 
-export function ConferenceControls({ onChatToggle, chatOpen, unreadCount = 0 }: Props) {
-  const router = useRouter()
-  const { localParticipant } = useLocalParticipant()
-
+export function ConferenceControls({ onChatToggle, chatOpen, unreadCount = 0, onLeave }: Props) {
   const cam = useTrackToggle({ source: Track.Source.Camera })
   const mic = useTrackToggle({ source: Track.Source.Microphone })
-  const screen = useTrackToggle({ source: Track.Source.ScreenShare })
 
   return (
     <div className="flex items-center justify-center gap-2 px-4 py-3 bg-[#161B22] border-t border-white/10 flex-shrink-0">
       <ControlBtn
         onClick={() => cam.toggle()}
         active={cam.enabled}
-        icon="📷"
-        iconOff="🚫"
-        label="카메라"
+        activeIcon="📷"
+        inactiveIcon="🚫"
+        label={cam.enabled ? '카메라' : '카메라 꺼짐'}
       />
       <ControlBtn
         onClick={() => mic.toggle()}
         active={mic.enabled}
-        icon="🎤"
-        iconOff="🔇"
-        label="마이크"
-      />
-      <ControlBtn
-        onClick={() => screen.toggle?.()}
-        active={screen.enabled}
-        icon="🖥️"
-        label="화면공유"
+        activeIcon="🎤"
+        inactiveIcon="🔇"
+        label={mic.enabled ? '마이크' : '음소거'}
       />
 
       <div className="w-px h-8 bg-white/10 mx-1" />
@@ -76,7 +67,7 @@ export function ConferenceControls({ onChatToggle, chatOpen, unreadCount = 0 }: 
         <ControlBtn
           onClick={onChatToggle}
           active={chatOpen}
-          icon="💬"
+          activeIcon="💬"
           label="채팅"
         />
         {unreadCount > 0 && !chatOpen && (
@@ -89,9 +80,9 @@ export function ConferenceControls({ onChatToggle, chatOpen, unreadCount = 0 }: 
       <div className="w-px h-8 bg-white/10 mx-1" />
 
       <ControlBtn
-        onClick={() => router.push('/dashboard')}
+        onClick={onLeave}
         danger
-        icon="↩️"
+        activeIcon="↩️"
         label="나가기"
       />
     </div>

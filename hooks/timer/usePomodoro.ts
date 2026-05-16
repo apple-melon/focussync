@@ -43,15 +43,26 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
 
   const rafRef = useRef<number>(0)
   const lastTickRef = useRef<number>(0)
+  const lastBroadcastRef = useRef<number>(0)
   const stateRef = useRef(state)
   const settingsRef = useRef(settings)
+  // Keep options in a ref so tick can always read the latest without being in deps
+  const optionsRef = useRef(options)
   stateRef.current = state
   settingsRef.current = settings
+  optionsRef.current = options
 
   const tick = useCallback(() => {
     const now = performance.now()
     const delta = (now - lastTickRef.current) / 1000
     lastTickRef.current = now
+
+    // Broadcast timer state once per second so other participants stay in sync
+    if (now - lastBroadcastRef.current >= 1000) {
+      lastBroadcastRef.current = now
+      const s = stateRef.current
+      optionsRef.current.onBroadcast?.(s.phase, s.timeLeft, s.sessionCount)
+    }
 
     setState((prev) => {
       const newTimeLeft = Math.max(0, prev.timeLeft - delta)
@@ -59,8 +70,7 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
       const newTotalFocus = isFocus ? prev.totalFocusSeconds + delta : prev.totalFocusSeconds
 
       if (newTimeLeft <= 0) {
-        // Phase complete
-        options.onPhaseComplete?.(prev.phase, Math.round(newTotalFocus))
+        optionsRef.current.onPhaseComplete?.(prev.phase, Math.round(newTotalFocus))
         const s = settingsRef.current
         const newSessionCount = isFocus ? prev.sessionCount + 1 : prev.sessionCount
         const next = nextPhase(prev.phase, newSessionCount - 1, s)
@@ -78,7 +88,7 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
     })
 
     rafRef.current = requestAnimationFrame(tick)
-  }, [options])
+  }, []) // intentionally empty — all mutable state accessed via refs
 
   useEffect(() => {
     if (state.isRunning) {
@@ -90,7 +100,6 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
     return () => cancelAnimationFrame(rafRef.current)
   }, [state.isRunning, tick])
 
-  // Save state on unmount
   useEffect(() => {
     const handleUnload = () => {
       const s = stateRef.current
@@ -100,7 +109,6 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
     return () => window.removeEventListener('beforeunload', handleUnload)
   }, [saveState])
 
-  // Pause on hidden tab
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden && stateRef.current.isRunning) {
