@@ -50,16 +50,16 @@ export default function RoomsPage() {
   }, [rooms, activeFilter, search])
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">집중방</h1>
-        <div className="relative">
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-white flex-1">집중방</h1>
+        <div className="relative flex-1 sm:flex-none">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="방 이름 검색..."
-            className="bg-[#161B22] border border-white/10 rounded-xl px-4 py-2 pl-9 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6366F1] transition-colors w-52"
+            className="bg-[#161B22] border border-white/10 rounded-xl px-4 py-2 pl-9 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6366F1] transition-colors w-full sm:w-52"
           />
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">🔍</span>
         </div>

@@ -31,7 +31,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
   const pct = Math.round((user.current / user.required) * 100)
 
   return (
-    <aside className="w-60 flex-shrink-0 flex flex-col bg-[#161B22] border-r border-white/10 h-full">
+    <aside className="hidden lg:flex w-60 flex-shrink-0 flex-col bg-[#161B22] border-r border-white/10 h-full">
       {/* Logo + bell */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
         <div className="flex items-center gap-2.5">

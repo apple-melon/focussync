@@ -41,7 +41,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       </button>
 
       {open && (
-        <div className="absolute left-full top-0 ml-2 w-72 bg-[#1C2333] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-2rem)] bg-[#1C2333] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <span className="text-sm font-semibold text-white">알림</span>
             {unreadCount === 0 && <span className="text-xs text-slate-500">모두 읽음</span>}

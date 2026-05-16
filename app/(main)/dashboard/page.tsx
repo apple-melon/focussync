@@ -151,39 +151,39 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-slate-400 text-sm">안녕하세요, <span className="text-white font-semibold">{displayName}</span>님! 👋</p>
-          <h1 className="text-2xl font-bold text-white mt-0.5">오늘도 집중해서 목표를 달성해봐요!</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-white mt-0.5 leading-tight">오늘도 집중해서 목표를 달성해봐요!</h1>
         </div>
         <Link
           href="/room/create"
-          className="flex items-center gap-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:scale-105"
+          className="flex-shrink-0 flex items-center gap-1.5 bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)]"
         >
-          🚪 집중방 만들기
+          🚪 <span className="hidden sm:inline">집중방 만들기</span><span className="sm:hidden">만들기</span>
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {STAT_CARDS.map((card) => (
-          <div key={card.label} className="bg-[#161B22] border border-white/10 rounded-2xl p-4 space-y-2">
+          <div key={card.label} className="bg-[#161B22] border border-white/10 rounded-2xl p-3 sm:p-4 space-y-1.5 sm:space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0" style={{ background: card.bg }}>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style={{ background: card.bg }}>
                 {card.icon}
               </div>
-              <span className="text-xs font-medium text-slate-400">{card.label}</span>
+              <span className="text-[11px] sm:text-xs font-medium text-slate-400 leading-tight">{card.label}</span>
             </div>
-            <p className="text-2xl font-bold text-white font-mono">{card.value}</p>
-            <p className="text-xs text-slate-500">{card.sub}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white font-mono">{card.value}</p>
+            <p className="text-[11px] sm:text-xs text-slate-500 truncate">{card.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Chart + Goal + Achievements */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Weekly chart */}
         <div className="lg:col-span-1 bg-[#161B22] border border-white/10 rounded-2xl p-5">
           <h3 className="text-sm font-semibold text-white mb-4">집중 시간 추이 (주간)</h3>
@@ -248,7 +248,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {publicRooms.map((room, idx) => (
               <Link
                 key={room.id}

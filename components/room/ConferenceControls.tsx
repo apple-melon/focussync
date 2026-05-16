@@ -19,7 +19,7 @@ function ControlBtn({ onClick, active = true, danger, label, activeIcon, inactiv
     <button
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all',
+        'flex flex-col items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold transition-all',
         danger
           ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30'
           : active
@@ -27,8 +27,8 @@ function ControlBtn({ onClick, active = true, danger, label, activeIcon, inactiv
           : 'bg-[#242E42] hover:bg-[#2d3748] text-slate-500 border border-white/5',
       )}
     >
-      <span className="text-xl">{icon}</span>
-      <span>{label}</span>
+      <span className="text-lg sm:text-xl">{icon}</span>
+      <span className="hidden sm:inline">{label}</span>
     </button>
   )
 }
@@ -45,7 +45,7 @@ export function ConferenceControls({ onChatToggle, chatOpen, unreadCount = 0, on
   const mic = useTrackToggle({ source: Track.Source.Microphone })
 
   return (
-    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-[#161B22] border-t border-white/10 flex-shrink-0">
+    <div className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-[#161B22] border-t border-white/10 flex-shrink-0">
       <ControlBtn
         onClick={() => cam.toggle()}
         active={cam.enabled}

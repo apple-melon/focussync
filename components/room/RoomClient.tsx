@@ -118,6 +118,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [pendingAchievement, setPendingAchievement] = useState<Achievement | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'video' | 'timer'>('video')
   const [currentStatus, setCurrentStatus] = useState<Status>('idle')
   const [unreadCount, setUnreadCount] = useState(0)
   const [showAwayModal, setShowAwayModal] = useState(false)
@@ -228,34 +229,56 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
     <div className="fixed inset-0 z-50 bg-[#0D0F14] flex flex-col">
 
       {/* ─── Header ─────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-5 py-2.5 border-b border-white/10 bg-[#161B22] flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-sm shadow-[0_0_12px_rgba(99,102,241,0.4)]">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 border-b border-white/10 bg-[#161B22] flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-sm shadow-[0_0_12px_rgba(99,102,241,0.4)] flex-shrink-0">
             ⏱
           </div>
-          <div>
-            <h1 className="font-bold text-white text-sm leading-tight">{room.name}</h1>
-            {room.topic && <p className="text-xs text-slate-500">{room.topic}</p>}
+          <div className="min-w-0">
+            <h1 className="font-bold text-white text-sm leading-tight truncate">{room.name}</h1>
+            {room.topic && <p className="text-xs text-slate-500 hidden sm:block">{room.topic}</p>}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs bg-[#0D0F14] border border-white/10 text-slate-400 px-2 py-1 rounded-lg">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <span className="font-mono text-xs bg-[#0D0F14] border border-white/10 text-slate-400 px-2 py-1 rounded-lg hidden sm:inline">
             {room.code}
           </span>
           <span className={`flex items-center gap-1.5 text-xs ${isConnected ? 'text-[#22C55E]' : 'text-amber-400'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#22C55E] animate-pulse' : 'bg-amber-400 animate-pulse'}`} />
-            {isConnected ? '연결됨' : '연결 중…'}
+            <span className="hidden sm:inline">{isConnected ? '연결됨' : '연결 중…'}</span>
           </span>
         </div>
       </header>
 
+      {/* ─── Mobile tab switcher ──────────────────────────────── */}
+      <div className="lg:hidden flex bg-[#161B22] border-b border-white/10 flex-shrink-0">
+        <button
+          onClick={() => setMobileTab('video')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${mobileTab === 'video' ? 'text-white border-b-2 border-[#6366F1]' : 'text-slate-500'}`}
+        >
+          📹 영상
+        </button>
+        <button
+          onClick={() => setMobileTab('timer')}
+          className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${mobileTab === 'timer' ? 'text-white border-b-2 border-[#6366F1]' : 'text-slate-500'}`}
+        >
+          ⏱ 타이머
+        </button>
+      </div>
+
       {/* ─── Body ──────────────────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden min-h-0">
 
-        {/* Left panel — Timer */}
-        <aside className="w-72 flex-shrink-0 flex flex-col items-center justify-between py-5 px-4 border-r border-white/10 bg-[#161B22] overflow-y-auto">
-          <div className="flex flex-col items-center gap-4 w-full">
+        {/* Timer panel — always shown on desktop, tab-controlled on mobile */}
+        <aside className={`
+          lg:w-72 lg:flex-shrink-0 lg:flex lg:flex-col lg:items-center lg:justify-between
+          lg:py-5 lg:px-4 lg:border-r lg:border-white/10 lg:bg-[#161B22] lg:overflow-y-auto
+          ${mobileTab === 'timer'
+            ? 'flex flex-col items-center py-5 px-4 overflow-y-auto flex-1 bg-[#161B22]'
+            : 'hidden lg:flex'}
+        `}>
+          <div className="flex flex-col items-center gap-4 w-full max-w-sm">
             <PomodoroTimer
               onSessionComplete={handleSessionComplete}
               onBroadcast={handleBroadcast}
@@ -285,17 +308,20 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
           </div>
 
           {/* XP bar at bottom */}
-          <div className="w-full mt-4">
+          <div className="w-full mt-4 max-w-sm">
             <XPBar xp={xp.xp} level={xp.level} current={xp.current} required={xp.required} pct={xp.pct} />
           </div>
         </aside>
 
-        {/* Right panel — Video grid + optional chat */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        {/* Video panel — always shown on desktop, tab-controlled on mobile */}
+        <div className={`
+          flex-1 flex flex-col overflow-hidden min-h-0
+          ${mobileTab === 'video' ? 'flex' : 'hidden lg:flex'}
+        `}>
           <VideoGrid />
 
           {chatOpen && (
-            <div className="h-64 flex-shrink-0 border-t border-white/10 bg-[#161B22] flex flex-col">
+            <div className="h-52 sm:h-64 flex-shrink-0 border-t border-white/10 bg-[#161B22] flex flex-col">
               <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
                 <span className="text-xs font-semibold text-slate-400">💬 채팅</span>
                 <button
@@ -316,7 +342,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
       {/* ─── Control bar ───────────────────────────────────────── */}
       <ConferenceControls
         onChatToggle={() => {
-          if (chatOpen) { setChatOpen(false) } else { setChatOpen(true); setUnreadCount(0) }
+          if (chatOpen) { setChatOpen(false); } else { setChatOpen(true); setUnreadCount(0); if (mobileTab !== 'video') setMobileTab('video') }
         }}
         chatOpen={chatOpen}
         unreadCount={unreadCount}

@@ -70,3 +70,13 @@ body {
   outline: 2px solid #6366F1;
   outline-offset: 2px;
 }
+
+/* Mobile safe area for notched/home-bar devices */
+.safe-area-pb {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Prevent text selection flicker on mobile taps */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}

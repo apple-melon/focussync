@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { levelProgress } from '@/lib/xp/formulas'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { MobileNav } from '@/components/layout/MobileNav'
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const progress = levelProgress(xp)
 
   return (
-    <div className="flex h-screen bg-[#0D0F14] overflow-hidden">
+    <div className="flex h-[100dvh] bg-[#0D0F14] overflow-hidden">
       <Sidebar
         user={{
           id: user.id,
@@ -30,9 +31,10 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           required: progress.required,
         }}
       />
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
         {children}
       </div>
+      <MobileNav />
     </div>
   )
 }

@@ -62,19 +62,19 @@ export default function FriendsPage() {
   const idle = friends.filter((f) => !f.is_studying)
 
   return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">친구</h1>
         <span className="text-sm text-slate-500">{friends.length}명</span>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-[#161B22] border border-white/10 rounded-xl p-1 gap-1 w-fit">
+      <div className="flex bg-[#161B22] border border-white/10 rounded-xl p-1 gap-1 w-full sm:w-fit">
         {([['list', '친구 목록'], ['requests', `신청 ${requests.length > 0 ? `(${requests.length})` : ''}`], ['search', '친구 찾기']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-[#6366F1] text-white' : 'text-slate-400 hover:text-white'}`}
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-[#6366F1] text-white' : 'text-slate-400 hover:text-white'}`}
           >
             {label}
           </button>
