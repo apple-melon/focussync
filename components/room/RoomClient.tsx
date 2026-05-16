@@ -126,6 +126,10 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
   const sessionStartedRef = useRef(false)
   const camBeforeRef = useRef(true)
   const micBeforeRef = useRef(true)
+  // Track combined LiveKit attributes so setAttributes always sends the full merged object
+  const liveKitAttrsRef = useRef<Record<string, string>>({ awayReason: '', status: 'idle' })
+  const localParticipantRef = useRef(localParticipant)
+  localParticipantRef.current = localParticipant
 
   const xp = useXP(userId)
   const { messages, sendMessage, updatePresence, broadcastTimer } = useRoom(
@@ -142,23 +146,35 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
     prevMsgCount.current = messages.length
   }, [messages.length, chatOpen])
 
+  // ── LiveKit attribute sync (merges with existing attrs) ──────────────────
+
+  function syncAttrs(updates: Record<string, string>) {
+    Object.assign(liveKitAttrsRef.current, updates)
+    localParticipantRef.current.setAttributes({ ...liveKitAttrsRef.current }).catch(() => {})
+  }
+
   // ── Away mode helpers ─────────────────────────────────────────────────────
 
   async function startAway(reason: string) {
-    camBeforeRef.current = localParticipant.isCameraEnabled
-    micBeforeRef.current = localParticipant.isMicrophoneEnabled
-    await localParticipant.setCameraEnabled(false)
-    await localParticipant.setMicrophoneEnabled(false)
-    await localParticipant.setAttributes({ awayReason: reason })
-    setAwayReason(reason)
+    // Update state first — don't let LiveKit failures block the overlay from showing
     setShowAwayModal(false)
+    setAwayReason(reason)
+    syncAttrs({ awayReason: reason, status: 'idle' })
+    try {
+      camBeforeRef.current = localParticipantRef.current.isCameraEnabled
+      micBeforeRef.current = localParticipantRef.current.isMicrophoneEnabled
+      await localParticipantRef.current.setCameraEnabled(false)
+      await localParticipantRef.current.setMicrophoneEnabled(false)
+    } catch {}
   }
 
   async function resumeFromAway() {
-    await localParticipant.setCameraEnabled(camBeforeRef.current)
-    await localParticipant.setMicrophoneEnabled(micBeforeRef.current)
-    await localParticipant.setAttributes({ awayReason: '' })
     setAwayReason(null)
+    syncAttrs({ awayReason: '' })
+    try {
+      await localParticipantRef.current.setCameraEnabled(camBeforeRef.current)
+      await localParticipantRef.current.setMicrophoneEnabled(micBeforeRef.current)
+    } catch {}
   }
 
   function leaveRoom() {
@@ -183,6 +199,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
       const status: Status = phase === 'focus' ? 'focusing' : 'on_break'
       setCurrentStatus(status)
       updatePresence({ status })
+      syncAttrs({ status })
     }
 
     if (phase === 'focus' && !sessionStartedRef.current) {
@@ -191,7 +208,15 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
       setSessionId(newId)
       notifyFriendsStudyStart(userId, room.id)
     }
-  }, [broadcastTimer, userId, updatePresence, room.id, awayReason])
+  }, [broadcastTimer, userId, updatePresence, room.id, awayReason]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRunningChange = useCallback((isRunning: boolean) => {
+    if (!isRunning) {
+      setCurrentStatus('idle')
+      updatePresence({ status: 'idle' })
+      syncAttrs({ status: 'idle' })
+    }
+  }, [updatePresence]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -234,6 +259,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
             <PomodoroTimer
               onSessionComplete={handleSessionComplete}
               onBroadcast={handleBroadcast}
+              onRunningChange={handleRunningChange}
             />
 
             {/* Auto status pill */}

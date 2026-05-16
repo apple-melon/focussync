@@ -23,6 +23,7 @@ function nextPhase(current: TimerPhase, sessionCount: number, settings: TimerSet
 interface UsePomodoroOptions {
   onPhaseComplete?: (phase: TimerPhase, focusSeconds: number) => void
   onBroadcast?: (phase: TimerPhase, timeLeft: number, sessionCount: number) => void
+  onRunningChange?: (isRunning: boolean) => void
 }
 
 export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, TimerControls, TimerSettings] {
@@ -97,6 +98,7 @@ export function usePomodoro(options: UsePomodoroOptions = {}): [TimerState, Time
     } else {
       cancelAnimationFrame(rafRef.current)
     }
+    optionsRef.current.onRunningChange?.(state.isRunning)
     return () => cancelAnimationFrame(rafRef.current)
   }, [state.isRunning, tick])
 

@@ -10,9 +10,10 @@ import type { TimerPhase } from '@/types/timer.types'
 interface Props {
   onSessionComplete?: (focusMinutes: number) => void
   onBroadcast?: (phase: TimerPhase, timeLeft: number, sessionCount: number) => void
+  onRunningChange?: (isRunning: boolean) => void
 }
 
-export function PomodoroTimer({ onSessionComplete, onBroadcast }: Props) {
+export function PomodoroTimer({ onSessionComplete, onBroadcast, onRunningChange }: Props) {
   const [state, controls, settings] = usePomodoro({
     onPhaseComplete: (phase, focusSeconds) => {
       if (phase === 'focus' && onSessionComplete) {
@@ -20,6 +21,7 @@ export function PomodoroTimer({ onSessionComplete, onBroadcast }: Props) {
       }
     },
     onBroadcast,
+    onRunningChange,
   })
 
   const totalSeconds =

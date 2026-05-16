@@ -13,6 +13,12 @@ import {
 import { Track } from 'livekit-client'
 import type { TrackReferenceOrPlaceholder } from '@livekit/components-react'
 
+const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  focusing: { label: '집중 중', color: '#22C55E', bg: '#22C55E18' },
+  on_break: { label: '휴식 중', color: '#EAB308', bg: '#EAB30818' },
+  idle:     { label: '대기',   color: '#94A3B8', bg: '#94A3B818' },
+}
+
 function MicOffBadge() {
   return (
     <div className="w-5 h-5 rounded-full bg-red-500/90 flex items-center justify-center flex-shrink-0">
@@ -34,8 +40,9 @@ function VideoTile({
   const isLocal = participant.sid === localSid
   const speaking = useIsSpeaking(participant)
   const micMuted = useIsMuted({ participant, source: Track.Source.Microphone })
-  // Reactively subscribe to away reason attribute set via localParticipant.setAttributes()
   const awayReason = useParticipantAttribute('awayReason', { participant })
+  const status = useParticipantAttribute('status', { participant })
+  const statusBadge = status ? STATUS_BADGE[status] : null
 
   const hasVideo =
     isTrackReference(trackRef) &&
@@ -83,12 +90,22 @@ function VideoTile({
         </div>
       )}
 
-      {/* Name + mic overlay (always visible at bottom) */}
+      {/* Name + mic + status overlay (always visible at bottom) */}
       {!awayReason && (
         <div className="absolute bottom-0 left-0 right-0 p-2 flex items-end justify-between bg-gradient-to-t from-black/60 to-transparent">
-          <span className="text-xs text-white font-medium truncate mr-1">
-            {displayName}{isLocal ? ' (나)' : ''}
-          </span>
+          <div className="flex flex-col items-start gap-1 min-w-0">
+            <span className="text-xs text-white font-medium truncate max-w-[120px]">
+              {displayName}{isLocal ? ' (나)' : ''}
+            </span>
+            {statusBadge && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none"
+                style={{ color: statusBadge.color, background: statusBadge.bg }}
+              >
+                {statusBadge.label}
+              </span>
+            )}
+          </div>
           {micMuted && <MicOffBadge />}
         </div>
       )}
