@@ -32,6 +32,7 @@ interface Props {
   displayName: string
   avatarUrl: string | null
   level: number
+  activeSkin?: string
 }
 
 // ─── Away modal ──────────────────────────────────────────────────────────────
@@ -111,7 +112,7 @@ function AwayOverlay({ reason, onResume, onLeave }: { reason: string; onResume: 
 
 // ─── Inner component — has access to LiveKit context ─────────────────────────
 
-function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props) {
+function StudyRoomContent({ room, userId, displayName, avatarUrl, level, activeSkin }: Props) {
   const connState = useConnectionState()
   const { localParticipant } = useLocalParticipant()
 
@@ -251,22 +252,27 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
     <div className="fixed inset-0 z-50 bg-[#0D0F14] flex flex-col">
 
       {/* ─── Header ─────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 border-b border-white/10 bg-[#161B22] flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-sm shadow-[0_0_12px_rgba(99,102,241,0.4)] flex-shrink-0">
+      <header className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-white/10 bg-[#161B22] flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Leave button — top-left, text only */}
+          <button
+            onClick={leaveRoom}
+            className="flex-shrink-0 text-slate-400 hover:text-red-400 text-sm font-semibold transition-colors px-2 py-1 rounded-lg hover:bg-red-500/10"
+          >
+            ← 나가기
+          </button>
+          <div className="w-px h-5 bg-white/15 flex-shrink-0" />
+          <div className="w-6 h-6 rounded-md bg-[#6366F1] flex items-center justify-center text-xs shadow-[0_0_10px_rgba(99,102,241,0.4)] flex-shrink-0">
             ⏱
           </div>
-          <div className="min-w-0">
-            <h1 className="font-bold text-white text-sm leading-tight truncate">{room.name}</h1>
-            {room.topic && <p className="text-xs text-slate-500 hidden sm:block">{room.topic}</p>}
-          </div>
+          <h1 className="font-bold text-white text-sm leading-tight truncate">{room.name}</h1>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="font-mono text-xs bg-[#0D0F14] border border-white/10 text-slate-400 px-2 py-1 rounded-lg hidden sm:inline">
             {room.code}
           </span>
-          <span className={`flex items-center gap-1.5 text-xs ${isConnected ? 'text-[#22C55E]' : 'text-amber-400'}`}>
+          <span className={`flex items-center gap-1 text-xs ${isConnected ? 'text-[#22C55E]' : 'text-amber-400'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#22C55E] animate-pulse' : 'bg-amber-400 animate-pulse'}`} />
             <span className="hidden sm:inline">{isConnected ? '연결됨' : '연결 중…'}</span>
           </span>
@@ -305,6 +311,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
               onSessionComplete={handleSessionComplete}
               onBroadcast={handleBroadcast}
               onRunningChange={handleRunningChange}
+              skin={activeSkin}
             />
 
             {/* Auto status pill */}
@@ -368,7 +375,6 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
         }}
         chatOpen={chatOpen}
         unreadCount={unreadCount}
-        onLeave={leaveRoom}
       />
 
       {/* ─── Modals / overlays ─────────────────────────────────── */}
@@ -394,7 +400,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
 
 // ─── Outer component — fetches token, provides LiveKitRoom ───────────────────
 
-export function RoomClient({ room, userId, displayName, avatarUrl, level }: Props) {
+export function RoomClient({ room, userId, displayName, avatarUrl, level, activeSkin }: Props) {
   const [token, setToken] = useState<string | null>(null)
   const [tokenError, setTokenError] = useState<string | null>(null)
   const liveKitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL
@@ -466,6 +472,7 @@ export function RoomClient({ room, userId, displayName, avatarUrl, level }: Prop
         displayName={displayName}
         avatarUrl={avatarUrl}
         level={level}
+        activeSkin={activeSkin}
       />
     </LiveKitRoom>
   )

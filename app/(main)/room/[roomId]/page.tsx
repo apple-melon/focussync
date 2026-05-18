@@ -20,7 +20,7 @@ export default async function RoomPage({ params }: Props) {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, avatar_url, xp')
+    .select('display_name, avatar_url, xp, active_skin')
     .eq('id', user.id)
     .single()
 
@@ -35,6 +35,7 @@ export default async function RoomPage({ params }: Props) {
       displayName={displayName}
       avatarUrl={avatarUrl}
       level={level}
+      activeSkin={profile?.active_skin ?? 'default'}
     />
   )
 }

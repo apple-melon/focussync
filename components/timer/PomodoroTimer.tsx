@@ -11,9 +11,10 @@ interface Props {
   onSessionComplete?: (focusMinutes: number) => void
   onBroadcast?: (phase: TimerPhase, timeLeft: number, sessionCount: number) => void
   onRunningChange?: (isRunning: boolean) => void
+  skin?: string
 }
 
-export function PomodoroTimer({ onSessionComplete, onBroadcast, onRunningChange }: Props) {
+export function PomodoroTimer({ onSessionComplete, onBroadcast, onRunningChange, skin }: Props) {
   const [state, controls, settings] = usePomodoro({
     onPhaseComplete: (phase, focusSeconds) => {
       if (phase === 'focus' && onSessionComplete) {
@@ -40,6 +41,7 @@ export function PomodoroTimer({ onSessionComplete, onBroadcast, onRunningChange 
         totalSeconds={totalSeconds}
         isRunning={state.isRunning}
         sessionCount={state.sessionCount}
+        skin={skin}
       />
       <TimerControls
         isRunning={state.isRunning}

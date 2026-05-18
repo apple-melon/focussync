@@ -51,7 +51,12 @@ export function ShopClient({ coins: initialCoins, streakShields: initialShields,
     return keys
   }, [ownedItems])
 
-  const filtered = activeTab === 'all' ? items : items.filter((i) => i.category === activeTab)
+  // Hide purchased cosmetics (one-time purchase)
+  const visibleItems = items.filter((item) => {
+    if (item.category === 'cosmetic' && ownedKeys[item.key]) return false
+    return true
+  })
+  const filtered = activeTab === 'all' ? visibleItems : visibleItems.filter((i) => i.category === activeTab)
 
   function showToast(type: 'success' | 'error', text: string) {
     setToast({ type, text })

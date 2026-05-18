@@ -53,12 +53,11 @@ function VideoTile({
 
   return (
     <div
-      className={`relative rounded-2xl overflow-hidden bg-[#1C2333] flex items-center justify-center transition-all duration-150 ${
+      className={`relative rounded-2xl overflow-hidden bg-[#1C2333] flex items-center justify-center transition-all duration-150 min-h-0 ${
         speaking && !awayReason
           ? 'ring-2 ring-[#22C55E] shadow-[0_0_16px_rgba(34,197,94,0.25)]'
           : 'ring-1 ring-white/8'
       }`}
-      style={{ aspectRatio: '16/9' }}
     >
       {hasVideo && !awayReason ? (
         <VideoTrack
@@ -68,7 +67,7 @@ function VideoTile({
       ) : (
         <div className="flex flex-col items-center justify-center gap-2 p-4">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold"
             style={{ background: '#6366F122', border: '2px solid #6366F144', color: '#818CF8' }}
           >
             {displayName?.[0]?.toUpperCase() ?? '?'}
@@ -81,7 +80,6 @@ function VideoTile({
         </div>
       )}
 
-      {/* Away state overlay */}
       {awayReason && (
         <div className="absolute inset-0 bg-[#0D0F14]/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 p-3">
           <span className="text-2xl">💤</span>
@@ -90,7 +88,6 @@ function VideoTile({
         </div>
       )}
 
-      {/* Name + mic + status overlay (always visible at bottom) */}
       {!awayReason && (
         <div className="absolute bottom-0 left-0 right-0 p-2 flex items-end justify-between bg-gradient-to-t from-black/60 to-transparent">
           <div className="flex flex-col items-start gap-1 min-w-0">
@@ -110,7 +107,6 @@ function VideoTile({
         </div>
       )}
 
-      {/* Away: still show name at bottom */}
       {awayReason && (
         <div className="absolute bottom-2 left-2">
           <span className="text-xs text-slate-500">{displayName}{isLocal ? ' (나)' : ''}</span>
@@ -134,16 +130,20 @@ export function VideoGrid() {
   )
 
   const count = cameraTracks.length
+
   const gridCols =
     count <= 1 ? 'grid-cols-1'
     : count <= 2 ? 'grid-cols-2'
     : count <= 4 ? 'grid-cols-2'
-    : count <= 6 ? 'grid-cols-3'
     : 'grid-cols-3'
 
+  const gridRows =
+    count <= 2 ? 'grid-rows-1'
+    : count <= 4 ? 'grid-rows-2'
+    : 'grid-rows-3'
+
   return (
-    <div className="flex-1 overflow-y-auto p-3 min-h-0">
-      {/* Invisible audio elements */}
+    <div className="flex-1 overflow-hidden p-3 min-h-0">
       {audioTracks
         .filter((t) => isTrackReference(t) && t.participant.sid !== localParticipant.sid)
         .map((t) => (
@@ -153,7 +153,7 @@ export function VideoGrid() {
           />
         ))}
 
-      <div className={`grid ${gridCols} gap-2 auto-rows-fr`}>
+      <div className={`grid ${gridCols} ${gridRows} gap-2 h-full`}>
         {cameraTracks.map((trackRef) => (
           <VideoTile
             key={`cam-${trackRef.participant.sid}`}

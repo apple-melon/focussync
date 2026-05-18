@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { TimerSettings as TSettings, TimerControls } from '@/types/timer.types'
 import { TIMER_LIMITS } from '@/config/constants'
 
@@ -19,15 +19,49 @@ interface SliderProps {
 }
 
 function Slider({ label, value, min, max, onChange, unit = '분' }: SliderProps) {
+  const [inputStr, setInputStr] = useState(String(value))
+
+  useEffect(() => { setInputStr(String(value)) }, [value])
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setInputStr(e.target.value)
+    const n = Number(e.target.value)
+    if (!isNaN(n) && n >= min && n <= max) onChange(n)
+  }
+
+  function handleInputBlur() {
+    const n = Math.max(min, Math.min(max, Number(inputStr) || min))
+    setInputStr(String(n))
+    onChange(n)
+  }
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-sm">
         <span className="text-slate-400">{label}</span>
-        <span className="text-white font-mono">{value}{unit}</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={min}
+            max={max}
+            value={inputStr}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            className="w-12 bg-[#0D0F14] border border-white/10 rounded-lg px-2 py-0.5 text-white font-mono text-sm text-center focus:outline-none focus:border-[#6366F1] transition-colors"
+          />
+          <span className="text-slate-400 text-sm">{unit}</span>
+        </div>
       </div>
       <input
-        type="range" min={min} max={max} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value)
+          setInputStr(String(n))
+          onChange(n)
+        }}
         className="w-full accent-[#6366F1]"
       />
     </div>

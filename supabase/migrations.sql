@@ -570,3 +570,168 @@ ON CONFLICT (key) DO NOTHING;
 DO $$ BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.coin_logs;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ============================================================
+-- Migration v4: 스킨 시스템 + 스트릭 코인 스케일링 + 구매 제한
+-- ============================================================
+
+-- 4-1. active_skin 컬럼 추가
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS active_skin TEXT NOT NULL DEFAULT 'default';
+
+-- 4-2. 스킨 "(출시 예정)" 텍스트 제거 (이제 실제 작동)
+UPDATE public.shop_items
+SET description = REPLACE(description, '. (출시 예정)', '')
+WHERE category = 'cosmetic';
+
+-- 4-3. update_streak 재정의: 스트릭 × 1.2 비례 코인 (최대 500)
+CREATE OR REPLACE FUNCTION public.update_streak(p_user_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_last_date       DATE;
+  v_today           DATE := CURRENT_DATE;
+  v_new_streak      INTEGER;
+  v_has_shield      BOOLEAN;
+  v_milestone_coins INTEGER;
+BEGIN
+  SELECT last_study_date, streak_shield > 0
+    INTO v_last_date, v_has_shield
+    FROM public.users WHERE id = p_user_id;
+
+  IF v_last_date = v_today THEN
+    RETURN;
+  ELSIF v_last_date = v_today - INTERVAL '1 day' THEN
+    UPDATE public.users
+    SET streak_days = streak_days + 1, last_study_date = v_today, updated_at = NOW()
+    WHERE id = p_user_id
+    RETURNING streak_days INTO v_new_streak;
+    IF v_new_streak % 10 = 0 THEN
+      v_milestone_coins := LEAST(ROUND(v_new_streak::NUMERIC * 1.2)::INTEGER, 500);
+      PERFORM public.award_coins(p_user_id, v_milestone_coins, 'streak_milestone_' || v_new_streak);
+    END IF;
+  ELSE
+    IF v_has_shield THEN
+      UPDATE public.users
+      SET streak_shield = streak_shield - 1, last_study_date = v_today, updated_at = NOW()
+      WHERE id = p_user_id;
+    ELSE
+      UPDATE public.users
+      SET streak_days = 1, last_study_date = v_today, updated_at = NOW()
+      WHERE id = p_user_id;
+    END IF;
+  END IF;
+END;
+$$;
+
+-- 4-4. purchase_item 재정의: 최대 보유 제한 + 스킨 자동 활성화
+CREATE OR REPLACE FUNCTION public.purchase_item(p_item_key TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_user_id     UUID := auth.uid();
+  v_item        public.shop_items%ROWTYPE;
+  v_coins       INTEGER;
+  v_expires     TIMESTAMPTZ;
+  v_item_id     UUID;
+  v_shield_count INTEGER;
+  v_already_owns BOOLEAN;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  SELECT * INTO v_item FROM public.shop_items WHERE key = p_item_key AND is_active = TRUE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Item not found');
+  END IF;
+
+  -- 스킨: 이미 보유 중이면 구매 불가
+  IF v_item.category = 'cosmetic' THEN
+    SELECT EXISTS(
+      SELECT 1 FROM public.user_items ui
+      WHERE ui.user_id = v_user_id AND ui.item_id = v_item.id AND ui.is_active = TRUE
+    ) INTO v_already_owns;
+    IF v_already_owns THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Already owned');
+    END IF;
+  END IF;
+
+  -- 소모품 최대 보유 제한
+  IF p_item_key = 'streak_shield' THEN
+    SELECT streak_shield INTO v_shield_count FROM public.users WHERE id = v_user_id;
+    IF v_shield_count >= 5 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Max shields reached (5)');
+    END IF;
+  ELSIF p_item_key = 'xp_booster' THEN
+    IF (SELECT xp_boost_until IS NOT NULL AND xp_boost_until > NOW() FROM public.users WHERE id = v_user_id) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'XP booster already active');
+    END IF;
+  ELSIF p_item_key = 'coin_booster' THEN
+    IF (SELECT coin_boost_until IS NOT NULL AND coin_boost_until > NOW() FROM public.users WHERE id = v_user_id) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Coin booster already active');
+    END IF;
+  END IF;
+
+  SELECT coins INTO v_coins FROM public.users WHERE id = v_user_id;
+  IF v_coins < v_item.price THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not enough coins');
+  END IF;
+
+  UPDATE public.users SET coins = coins - v_item.price, updated_at = NOW() WHERE id = v_user_id;
+  INSERT INTO public.coin_logs (user_id, amount, reason)
+  VALUES (v_user_id, -v_item.price, 'purchase:' || p_item_key);
+
+  IF v_item.duration_hours IS NOT NULL THEN
+    v_expires := NOW() + (v_item.duration_hours || ' hours')::INTERVAL;
+  END IF;
+
+  INSERT INTO public.user_items (user_id, item_id, expires_at, is_active)
+  VALUES (v_user_id, v_item.id, v_expires, TRUE)
+  RETURNING id INTO v_item_id;
+
+  IF p_item_key = 'xp_booster' THEN
+    UPDATE public.users SET xp_boost_until = v_expires WHERE id = v_user_id;
+  ELSIF p_item_key = 'coin_booster' THEN
+    UPDATE public.users SET coin_boost_until = v_expires WHERE id = v_user_id;
+  ELSIF p_item_key = 'streak_shield' THEN
+    UPDATE public.users SET streak_shield = streak_shield + 1 WHERE id = v_user_id;
+  ELSIF v_item.category = 'cosmetic' THEN
+    UPDATE public.users SET active_skin = p_item_key WHERE id = v_user_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'item_id', v_item_id,
+    'remaining_coins', (SELECT coins FROM public.users WHERE id = v_user_id)
+  );
+END;
+$$;
+
+-- 4-5. 스킨 활성화 RPC
+CREATE OR REPLACE FUNCTION public.activate_skin(p_skin_key TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_owned   BOOLEAN;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  IF p_skin_key = 'default' THEN
+    UPDATE public.users SET active_skin = 'default' WHERE id = v_user_id;
+    RETURN jsonb_build_object('success', true);
+  END IF;
+
+  SELECT EXISTS(
+    SELECT 1 FROM public.user_items ui
+    JOIN public.shop_items si ON ui.item_id = si.id
+    WHERE ui.user_id = v_user_id AND si.key = p_skin_key AND si.category = 'cosmetic' AND ui.is_active = TRUE
+  ) INTO v_owned;
+
+  IF NOT v_owned THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Skin not owned');
+  END IF;
+
+  UPDATE public.users SET active_skin = p_skin_key WHERE id = v_user_id;
+  RETURN jsonb_build_object('success', true);
+END;
+$$;

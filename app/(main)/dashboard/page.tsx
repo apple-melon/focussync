@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getPublicRooms } from '@/services/room.service'
 import { levelProgress, getLevelTier } from '@/lib/xp/formulas'
+import { DailyCheckinButton } from '@/components/dashboard/DailyCheckinButton'
 
 const ROOM_GRADIENTS = [
   'from-indigo-900 via-purple-900 to-slate-900',
@@ -84,12 +85,9 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Daily visit → update streak (fire-and-forget; won't block render)
-  void supabase.rpc('daily_checkin', { p_user_id: user!.id })
-
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, xp, streak_days, total_focus_minutes, last_study_date, daily_goal_minutes')
+    .select('display_name, xp, streak_days, total_focus_minutes, last_study_date, daily_goal_minutes, last_coin_claim_date')
     .eq('id', user!.id)
     .single()
 
@@ -116,6 +114,8 @@ export default async function DashboardPage() {
   })
 
   const publicRooms = await getPublicRooms(4)
+  const today = new Date().toISOString().slice(0, 10)
+  const alreadyCheckedIn = (profile?.last_coin_claim_date ?? '') === today
   const xp = profile?.xp ?? 0
   const progress = levelProgress(xp)
   const tier = getLevelTier(progress.level)
@@ -168,6 +168,13 @@ export default async function DashboardPage() {
           🚪 <span className="hidden sm:inline">집중방 만들기</span><span className="sm:hidden">만들기</span>
         </Link>
       </div>
+
+      {/* Daily Checkin */}
+      <DailyCheckinButton
+        userId={user!.id}
+        streakDays={profile?.streak_days ?? 0}
+        alreadyCheckedIn={alreadyCheckedIn}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
