@@ -22,7 +22,6 @@ const NAV_ITEMS = [
   { href: '/rooms',     label: '집중방',   icon: '🚪' },
   { href: '/ranking',   label: '랭킹',     icon: '🏆' },
   { href: '/shop',      label: '상점',     icon: '🛍️' },
-  { href: '/inventory', label: '인벤토리', icon: '🎒' },
   { href: '/friends',   label: '친구',     icon: '👥' },
   { href: '/profile',   label: '업적',     icon: '🏅' },
   { href: '/settings',  label: '설정',     icon: '🔧' },
@@ -70,20 +69,34 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
       {/* User profile */}
       <div className="p-4 border-t border-white/10">
-        <Link href="/profile" className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden"
-            style={{ background: `${tier.color}22`, border: `1.5px solid ${tier.color}55` }}
+        <div className="flex items-center gap-2 mb-3">
+          <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden"
+              style={{ background: `${tier.color}22`, border: `1.5px solid ${tier.color}55` }}
+            >
+              {user.avatarUrl
+                ? <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                : <span style={{ color: tier.color }}>{user.displayName[0]?.toUpperCase()}</span>}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user.displayName}</p>
+              <p className="text-xs font-medium" style={{ color: tier.color }}>Lv.{user.level} {tier.name}</p>
+            </div>
+          </Link>
+          <Link
+            href="/inventory"
+            title="인벤토리"
+            className={cn(
+              'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-base transition-all',
+              pathname === '/inventory'
+                ? 'bg-[#6366F1]/15 text-[#6366F1]'
+                : 'text-slate-500 hover:text-white hover:bg-white/5',
+            )}
           >
-            {user.avatarUrl
-              ? <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-              : <span style={{ color: tier.color }}>{user.displayName[0]?.toUpperCase()}</span>}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{user.displayName}</p>
-            <p className="text-xs font-medium" style={{ color: tier.color }}>Lv.{user.level} {tier.name}</p>
-          </div>
-        </Link>
+            🎒
+          </Link>
+        </div>
         <div className="space-y-1">
           <div className="h-1.5 bg-[#0D0F14] rounded-full overflow-hidden">
             <div

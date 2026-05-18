@@ -2,7 +2,7 @@
 
 import '@livekit/components-styles'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { LiveKitRoom, useConnectionState, useLocalParticipant } from '@livekit/components-react'
+import { LiveKitRoom, useConnectionState, useLocalParticipant, useParticipants } from '@livekit/components-react'
 import { ConnectionState } from 'livekit-client'
 import type { StudyRoom } from '@/types/room.types'
 import { useRoom } from '@/hooks/room/useRoom'
@@ -115,6 +115,8 @@ function AwayOverlay({ reason, onResume, onLeave }: { reason: string; onResume: 
 function StudyRoomContent({ room, userId, displayName, avatarUrl, level, activeSkin }: Props) {
   const connState = useConnectionState()
   const { localParticipant } = useLocalParticipant()
+  const remoteParticipants = useParticipants()
+  const onlineCount = remoteParticipants.length + 1 // +1 for local
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [pendingAchievement, setPendingAchievement] = useState<Achievement | null>(null)
@@ -271,6 +273,10 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level, activeS
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="font-mono text-xs bg-[#0D0F14] border border-white/10 text-slate-400 px-2 py-1 rounded-lg hidden sm:inline">
             {room.code}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-slate-400 bg-[#0D0F14] border border-white/10 px-2 py-1 rounded-lg">
+            <span>👥</span>
+            <span className="font-mono font-semibold text-white">{onlineCount}</span>
           </span>
           <span className={`flex items-center gap-1 text-xs ${isConnected ? 'text-[#22C55E]' : 'text-amber-400'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-[#22C55E] animate-pulse' : 'bg-amber-400 animate-pulse'}`} />
