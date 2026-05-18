@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
 import { getLevelTier } from '@/lib/xp/formulas'
 import { NotificationBell } from './NotificationBell'
+import { CoinBalance } from './CoinBalance'
 
 interface SidebarUser {
   id: string
@@ -108,11 +109,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
             {user.current.toLocaleString()} / {user.required.toLocaleString()} XP
           </p>
         </div>
-        <div className="flex items-center gap-1.5 mt-2 px-0.5">
-          <span className="text-base leading-none">💰</span>
-          <span className="text-sm font-bold text-yellow-400">{user.coins.toLocaleString()}</span>
-          <span className="text-xs text-slate-500">코인</span>
-        </div>
+        <CoinBalance userId={user.id} initialCoins={user.coins} />
       </div>
     </aside>
   )
