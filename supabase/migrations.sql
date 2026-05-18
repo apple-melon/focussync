@@ -3,7 +3,7 @@
 -- Supabase SQL Editor에서 실행하세요
 -- ============================================================
 
--- 1. chat_messages에 sender 정보 추가 (realtime 메시지에서 사용자 정보 보여주기)
+-- 1. chat_messages에 sender 정보 추가
 ALTER TABLE public.chat_messages
   ADD COLUMN IF NOT EXISTS sender_name   TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS sender_avatar TEXT;
@@ -24,15 +24,20 @@ CREATE TABLE IF NOT EXISTS public.friendships (
   CHECK (requester_id != addressee_id)
 );
 ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Users see own friendships"
-  ON public.friendships FOR SELECT
-  USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
-CREATE POLICY IF NOT EXISTS "Users send friend requests"
-  ON public.friendships FOR INSERT
-  WITH CHECK (auth.uid() = requester_id);
-CREATE POLICY IF NOT EXISTS "Addressee can update status"
-  ON public.friendships FOR UPDATE
-  USING (auth.uid() = addressee_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='friendships' AND policyname='Users see own friendships') THEN
+    CREATE POLICY "Users see own friendships" ON public.friendships FOR SELECT
+      USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='friendships' AND policyname='Users send friend requests') THEN
+    CREATE POLICY "Users send friend requests" ON public.friendships FOR INSERT
+      WITH CHECK (auth.uid() = requester_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='friendships' AND policyname='Addressee can update status') THEN
+    CREATE POLICY "Addressee can update status" ON public.friendships FOR UPDATE
+      USING (auth.uid() = addressee_id);
+  END IF;
+END $$;
 
 -- 4. 알림 테이블
 CREATE TABLE IF NOT EXISTS public.notifications (
@@ -47,17 +52,29 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Users see own notifications"
-  ON public.notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Anyone insert notifications"
-  ON public.notifications FOR INSERT WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "Users mark own read"
-  ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='notifications' AND policyname='Users see own notifications') THEN
+    CREATE POLICY "Users see own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='notifications' AND policyname='Anyone insert notifications') THEN
+    CREATE POLICY "Anyone insert notifications" ON public.notifications FOR INSERT WITH CHECK (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='notifications' AND policyname='Users mark own read') THEN
+    CREATE POLICY "Users mark own read" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- 5. Realtime 활성화 (필수!)
-ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.friendships;
+DO $$ BEGIN
+  PERFORM pg_catalog.set_config('search_path', 'public', false);
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.friendships;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================
 -- Migration v2: 스트릭·레벨·집중시간·채팅 버그 수정
@@ -73,15 +90,12 @@ BEGIN
   SELECT last_study_date INTO v_last_date FROM public.users WHERE id = p_user_id;
 
   IF v_last_date = v_today THEN
-    -- 오늘 이미 업데이트됨 → 스킵
-    RETURN;
+    RETURN; -- 오늘 이미 업데이트됨
   ELSIF v_last_date = v_today - INTERVAL '1 day' THEN
-    -- 어제 공부함 → 연속 +1
     UPDATE public.users
     SET streak_days = streak_days + 1, last_study_date = v_today, updated_at = NOW()
     WHERE id = p_user_id;
   ELSE
-    -- 처음이거나 스트릭 끊김 → 1로 리셋
     UPDATE public.users
     SET streak_days = 1, last_study_date = v_today, updated_at = NOW()
     WHERE id = p_user_id;
@@ -135,8 +149,7 @@ $$;
 -- 2-4. 일일 방문 체크인: 스트릭 업데이트 + 현재 streak 반환
 CREATE OR REPLACE FUNCTION public.daily_checkin(p_user_id UUID)
 RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_streak INTEGER;
+DECLARE v_streak INTEGER;
 BEGIN
   PERFORM public.update_streak(p_user_id);
   SELECT streak_days INTO v_streak FROM public.users WHERE id = p_user_id;
@@ -168,20 +181,20 @@ BEGIN
       CONTINUE;
     END IF;
 
-    IF (v_achievement.key = 'first_session'  AND v_session_count >= 1)          OR
-       (v_achievement.key = 'streak_3'       AND v_user.streak_days >= 3)       OR
-       (v_achievement.key = 'streak_7'       AND v_user.streak_days >= 7)       OR
-       (v_achievement.key = 'streak_30'      AND v_user.streak_days >= 30)      OR
-       (v_achievement.key = 'level_5'        AND v_user.level >= 5)             OR
-       (v_achievement.key = 'level_10'       AND v_user.level >= 10)            OR
-       (v_achievement.key = 'level_25'       AND v_user.level >= 25)            OR
-       (v_achievement.key = 'room_host'      AND v_has_room)                    OR
+    IF (v_achievement.key = 'first_session'  AND v_session_count >= 1)               OR
+       (v_achievement.key = 'streak_3'       AND v_user.streak_days >= 3)            OR
+       (v_achievement.key = 'streak_7'       AND v_user.streak_days >= 7)            OR
+       (v_achievement.key = 'streak_30'      AND v_user.streak_days >= 30)           OR
+       (v_achievement.key = 'level_5'        AND v_user.level >= 5)                  OR
+       (v_achievement.key = 'level_10'       AND v_user.level >= 10)                 OR
+       (v_achievement.key = 'level_25'       AND v_user.level >= 25)                 OR
+       (v_achievement.key = 'room_host'      AND v_has_room)                         OR
        (v_achievement.key = 'marathon'       AND v_user.total_focus_minutes >= 240)
     THEN
       INSERT INTO public.user_achievements (user_id, achievement_id)
         VALUES (p_user_id, v_achievement.id) ON CONFLICT DO NOTHING;
       UPDATE public.users
-        SET xp = xp + v_achievement.xp_reward,
+        SET xp    = xp + v_achievement.xp_reward,
             level = FLOOR(SQRT((xp + v_achievement.xp_reward)::NUMERIC / 100)) + 1
         WHERE id = p_user_id;
       v_new := v_new || jsonb_build_object(
