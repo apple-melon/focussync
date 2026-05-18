@@ -125,6 +125,8 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
   const [awayReason, setAwayReason] = useState<string | null>(null)
 
   const sessionStartedRef = useRef(false)
+  const focusSecondsRef = useRef(0) // focus seconds accumulated in current incomplete phase
+  const sessionIdRef = useRef<string | null>(null) // mirror of sessionId for use in leaveRoom
   const camBeforeRef = useRef(true)
   const micBeforeRef = useRef(true)
   // Track combined LiveKit attributes so setAttributes always sends the full merged object
@@ -178,22 +180,41 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
     } catch {}
   }
 
-  function leaveRoom() {
+  async function leaveRoom() {
+    // Save partial focus session before navigating away
+    const sid = sessionIdRef.current
+    if (sid) {
+      const mins = Math.round(focusSecondsRef.current / 60)
+      try {
+        await endStudySession(sid, mins, userId)
+        if (mins >= 1) await xp.awardSessionXP(mins, sid)
+      } catch {}
+    }
     window.location.href = '/dashboard'
   }
 
   // ── Timer callbacks ───────────────────────────────────────────────────────
 
   const handleSessionComplete = useCallback(async (focusMinutes: number) => {
-    if (sessionId) await endStudySession(sessionId, focusMinutes)
-    const result = await xp.awardSessionXP(focusMinutes, sessionId ?? '')
-    if (result?.newAchievements?.length) setPendingAchievement(result.newAchievements[0])
+    const sid = sessionIdRef.current
+    if (sid) {
+      await endStudySession(sid, focusMinutes, userId)
+      const result = await xp.awardSessionXP(focusMinutes, sid)
+      if (result?.newAchievements?.length) setPendingAchievement(result.newAchievements[0])
+    }
+    focusSecondsRef.current = 0 // reset for next phase
     const newId = await startStudySession(room.id, userId)
     setSessionId(newId)
-  }, [sessionId, xp, room.id, userId])
+    sessionIdRef.current = newId
+  }, [xp, room.id, userId])
 
   const handleBroadcast = useCallback(async (phase: TimerPhase, timeLeft: number, sc: number) => {
     broadcastTimer({ type: 'timer_update', userId, phase, timeLeft, sessionCount: sc })
+
+    // Track focus seconds for partial-session save on leave
+    if (phase === 'focus' && !awayReason) {
+      focusSecondsRef.current += 1
+    }
 
     // Auto-update status from timer phase (only when not away)
     if (!awayReason) {
@@ -207,6 +228,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
       sessionStartedRef.current = true
       const newId = await startStudySession(room.id, userId)
       setSessionId(newId)
+      sessionIdRef.current = newId
       notifyFriendsStudyStart(userId, room.id)
     }
   }, [broadcastTimer, userId, updatePresence, room.id, awayReason]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -303,7 +325,7 @@ function StudyRoomContent({ room, userId, displayName, avatarUrl, level }: Props
               onClick={() => setShowAwayModal(true)}
               className="flex items-center gap-2 px-5 py-2 bg-[#242E42] hover:bg-[#2d3748] text-slate-400 hover:text-white text-sm font-semibold rounded-xl transition-colors border border-white/8 w-full justify-center"
             >
-              💤 대기
+              🚶 자리 비우기
             </button>
           </div>
 

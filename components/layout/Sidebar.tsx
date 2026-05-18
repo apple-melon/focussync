@@ -21,8 +21,8 @@ const NAV_ITEMS = [
   { href: '/rooms',     label: '집중방',   icon: '🚪' },
   { href: '/ranking',   label: '랭킹',     icon: '🏆' },
   { href: '/friends',   label: '친구',     icon: '👥' },
-  { href: '/profile',   label: '업적',     icon: '🎖' },
-  { href: '/settings',  label: '설정',     icon: '⚙' },
+  { href: '/profile',   label: '업적',     icon: '🏅' },
+  { href: '/settings',  label: '설정',     icon: '🔧' },
 ]
 
 export function Sidebar({ user }: { user: SidebarUser }) {

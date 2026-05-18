@@ -14,7 +14,7 @@ interface ValidationResult {
 const MAX_FOCUS_MINUTES = 90
 const MIN_FOCUS_MINUTES = 1
 const MAX_SESSION_COUNT_PER_DAY = 20
-const MAX_XP_PER_SESSION = 500
+const MAX_XP_PER_SESSION = 2000
 const CLOCK_SKEW_TOLERANCE_SECONDS = 60
 
 export function validateSession(input: SessionValidationInput): ValidationResult {

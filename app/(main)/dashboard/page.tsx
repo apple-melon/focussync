@@ -84,6 +84,9 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Daily visit → update streak (fire-and-forget; won't block render)
+  void supabase.rpc('daily_checkin', { p_user_id: user!.id })
+
   const { data: profile } = await supabase
     .from('users')
     .select('display_name, xp, streak_days, total_focus_minutes, last_study_date, daily_goal_minutes')

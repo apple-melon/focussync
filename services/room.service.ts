@@ -75,10 +75,16 @@ export async function getRoomByCode(code: string): Promise<StudyRoom | null> {
 
 export async function getChatMessages(roomId: string): Promise<ChatMessage[]> {
   const supabase = createClient()
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  // Fire-and-forget cleanup of messages older than 24h
+  void supabase.rpc('cleanup_old_chat_messages')
+
   const { data, error } = await supabase
     .from('chat_messages')
     .select('*')
     .eq('room_id', roomId)
+    .gte('created_at', since)
     .order('created_at', { ascending: true })
     .limit(ROOM.CHAT_HISTORY_LIMIT)
 
@@ -95,7 +101,7 @@ export async function saveChatMessage(
   isSystem = false,
 ): Promise<void> {
   const supabase = createClient()
-  await supabase.from('chat_messages').insert({
+  const { error } = await supabase.from('chat_messages').insert({
     room_id: roomId,
     user_id: userId,
     content,
@@ -103,6 +109,7 @@ export async function saveChatMessage(
     sender_name: senderName,
     sender_avatar: senderAvatar,
   })
+  if (error) console.warn('[chat] save failed:', error.message)
 }
 
 export async function startStudySession(
@@ -120,13 +127,32 @@ export async function startStudySession(
   return data.id
 }
 
+// Atomically ends session and increments users.total_focus_minutes
 export async function endStudySession(
   sessionId: string,
   focusMinutes: number,
+  userId?: string,
 ): Promise<void> {
   const supabase = createClient()
-  await supabase
-    .from('study_sessions')
-    .update({ ended_at: new Date().toISOString(), focus_minutes: focusMinutes })
-    .eq('id', sessionId)
+
+  if (userId) {
+    // Use RPC so total_focus_minutes is updated atomically
+    const { error } = await supabase.rpc('end_study_session', {
+      p_session_id: sessionId,
+      p_user_id: userId,
+      p_focus_minutes: focusMinutes,
+    })
+    if (error) {
+      // Fallback: plain update (happens if migrations v2 not yet run)
+      await supabase
+        .from('study_sessions')
+        .update({ ended_at: new Date().toISOString(), focus_minutes: focusMinutes })
+        .eq('id', sessionId)
+    }
+  } else {
+    await supabase
+      .from('study_sessions')
+      .update({ ended_at: new Date().toISOString(), focus_minutes: focusMinutes })
+      .eq('id', sessionId)
+  }
 }

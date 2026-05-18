@@ -9,7 +9,7 @@ const MOBILE_NAV = [
   { href: '/rooms',     label: '집중방', icon: '🚪' },
   { href: '/ranking',   label: '랭킹',  icon: '🏆' },
   { href: '/friends',   label: '친구',  icon: '👥' },
-  { href: '/profile',   label: '프로필', icon: '🎖' },
+  { href: '/profile',   label: '프로필', icon: '🏅' },
 ]
 
 export function MobileNav() {
