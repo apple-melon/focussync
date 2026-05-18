@@ -29,7 +29,7 @@ export default function HomePage() {
 
       {/* Nav */}
       <nav className="relative border-b border-white/10 bg-[#161B22]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <span className="font-bold text-lg">⚡ FocusSync</span>
+        <span className="font-bold text-lg">⚡ FocusWithMe</span>
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white transition-colors">대시보드</Link>
           <Link href="/login" className="bg-[#6366F1] hover:bg-[#4F46E5] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-[0_0_20px_rgba(99,102,241,0.3)]">
@@ -129,7 +129,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 text-center text-sm text-slate-600">
-        <p>© 2026 FocusSync. 함께 집중하고, 함께 성장해요.</p>
+        <p>© 2026 FocusWithMe. 함께 집중하고, 함께 성장해요.</p>
       </footer>
     </div>
   )

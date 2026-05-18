@@ -26,9 +26,17 @@ export const ROOM = {
 } as const
 
 export const STORAGE_KEYS = {
-  TIMER_SETTINGS: 'focussync:timer:settings',
-  TIMER_STATE: 'focussync:timer:state',
-  THEME: 'focussync:theme',
+  TIMER_SETTINGS: 'focuswithme:timer:settings',
+  TIMER_STATE: 'focuswithme:timer:state',
+  THEME: 'focuswithme:theme',
+} as const
+
+export const COIN_REWARDS = {
+  DAILY_LOGIN: 10,
+  SESSION_COMPLETE: 5,
+  DAILY_GOAL: 20,
+  STREAK_MILESTONE: 50,
+  ACHIEVEMENT: 15,
 } as const
 
 export const XP_RULES = {

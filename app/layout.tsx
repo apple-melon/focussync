@@ -23,21 +23,21 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'FocusSync — 실시간 같이 공부',
-    template: '%s | FocusSync',
+    default: 'FocusWithMe — 실시간 같이 공부',
+    template: '%s | FocusWithMe',
   },
   description: '친구들과 함께 집중하고, 포모도로 타이머로 레벨업하고, 랭킹을 경쟁하세요.',
   keywords: ['공부', '포모도로', '집중', '스터디', '게임화', '랭킹'],
-  authors: [{ name: 'FocusSync Team' }],
+  authors: [{ name: 'FocusWithMe Team' }],
   openGraph: {
-    title: 'FocusSync — 실시간 같이 공부',
+    title: 'FocusWithMe — 실시간 같이 공부',
     description: '친구들과 함께 집중하고, 포모도로 타이머로 레벨업하세요.',
     type: 'website',
     locale: 'ko_KR',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FocusSync',
+    title: 'FocusWithMe',
     description: '실시간 같이 공부 + 집중력 게임화 플랫폼',
   },
 }

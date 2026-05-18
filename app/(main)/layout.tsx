@@ -11,7 +11,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   const { data: profile } = await supabase
     .from('users')
-    .select('display_name, avatar_url, xp')
+    .select('display_name, avatar_url, xp, coins')
     .eq('id', user.id)
     .single()
 
@@ -29,6 +29,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           xp,
           current: progress.current,
           required: progress.required,
+          coins: profile?.coins ?? 0,
         }}
       />
       <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">

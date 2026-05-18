@@ -7,8 +7,8 @@ import { cn } from '@/utils/cn'
 const MOBILE_NAV = [
   { href: '/dashboard', label: '홈',   icon: '🏠' },
   { href: '/rooms',     label: '집중방', icon: '🚪' },
+  { href: '/shop',      label: '상점',  icon: '🛍️' },
   { href: '/ranking',   label: '랭킹',  icon: '🏆' },
-  { href: '/friends',   label: '친구',  icon: '👥' },
   { href: '/profile',   label: '프로필', icon: '🏅' },
 ]
 

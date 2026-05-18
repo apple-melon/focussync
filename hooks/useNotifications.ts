@@ -47,7 +47,7 @@ export function useNotifications(userId: string | null) {
 
           // Browser notification
           if (typeof window !== 'undefined' && Notification.permission === 'granted') {
-            new Notification('FocusSync', { body: n.message, icon: '/favicon.ico' })
+            new Notification('FocusWithMe', { body: n.message, icon: '/favicon.ico' })
           }
         },
       )

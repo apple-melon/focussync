@@ -14,12 +14,14 @@ interface SidebarUser {
   xp: number
   current: number
   required: number
+  coins: number
 }
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: '대시보드', icon: '🏠' },
   { href: '/rooms',     label: '집중방',   icon: '🚪' },
   { href: '/ranking',   label: '랭킹',     icon: '🏆' },
+  { href: '/shop',      label: '상점',     icon: '🛍️' },
   { href: '/friends',   label: '친구',     icon: '👥' },
   { href: '/profile',   label: '업적',     icon: '🏅' },
   { href: '/settings',  label: '설정',     icon: '🔧' },
@@ -38,7 +40,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
           <div className="w-8 h-8 rounded-xl bg-[#6366F1] flex items-center justify-center text-white font-bold shadow-[0_0_12px_rgba(99,102,241,0.4)]">
             ⚡
           </div>
-          <span className="font-bold text-white tracking-tight">FocusSync</span>
+          <span className="font-bold text-white tracking-tight">FocusWithMe</span>
         </div>
         <NotificationBell userId={user.id} />
       </div>
@@ -91,6 +93,11 @@ export function Sidebar({ user }: { user: SidebarUser }) {
           <p className="text-xs text-slate-600 text-right font-mono">
             {user.current.toLocaleString()} / {user.required.toLocaleString()} XP
           </p>
+        </div>
+        <div className="flex items-center gap-1.5 mt-2 px-0.5">
+          <span className="text-base leading-none">💰</span>
+          <span className="text-sm font-bold text-yellow-400">{user.coins.toLocaleString()}</span>
+          <span className="text-xs text-slate-500">코인</span>
         </div>
       </div>
     </aside>
